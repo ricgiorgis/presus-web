@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,16 +16,23 @@ import { expensesService } from "@/services/supabase/expenses";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { formatAmount } from "@/constants/currencies";
 import { AddExpenseDialog } from "./components/AddExpenseDialog";
+import { useFamily } from "@/contexts/FamilyContext";
 import type { Expense } from "@/types/models";
+
+type SharedFilter = "all" | "shared" | "personal";
 
 export default function GastosPage() {
   const { t } = useTranslation();
+  const { familyGroupId, groupType, members } = useFamily();
   const [userId, setUserId] = useState<string | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(format(new Date(), "yyyy-MM"));
+  const [sharedFilter, setSharedFilter] = useState<SharedFilter>("all");
+
+  const showSharedFilter = !!familyGroupId && (groupType === "familiar" || groupType === "roommates");
 
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();
@@ -39,7 +46,8 @@ export default function GastosPage() {
       const data = await expensesService.getAll(uid, {
         month: filterMonth,
         ...(filterCategory !== "all" ? { category: filterCategory } : {}),
-      });
+        ...(showSharedFilter ? { sharedFilter } : {}),
+      }, familyGroupId);
       setExpenses(data);
     } catch {
       toast.error("Error al cargar gastos");
@@ -56,7 +64,7 @@ export default function GastosPage() {
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterMonth, filterCategory]);
+  }, [filterMonth, filterCategory, familyGroupId, sharedFilter]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -70,8 +78,13 @@ export default function GastosPage() {
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
   const defaultCurrency = expenses[0]?.currency_code ?? "GTQ";
-
   const getCat = (id: string) => EXPENSE_CATEGORIES.find((c) => c.id === id);
+
+  function getMemberInitials(uid: string) {
+    const m = members.find((m) => m.user_id === uid);
+    if (!m) return uid.slice(0, 2).toUpperCase();
+    return m.user_id === userId ? "Yo" : uid.slice(0, 2).toUpperCase();
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -116,6 +129,29 @@ export default function GastosPage() {
         </Select>
       </div>
 
+      {/* Shared filter pills — only shown in familiar/roommates groups */}
+      {showSharedFilter && (
+        <div className="flex gap-2">
+          {(["all", "shared", "personal"] as SharedFilter[]).map((f) => {
+            const labels = { all: "Todos", shared: "Compartidos", personal: "Solo míos" };
+            return (
+              <button
+                key={f}
+                onClick={() => setSharedFilter(f)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors border ${
+                  sharedFilter === f
+                    ? "text-white border-transparent"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+                style={sharedFilter === f ? { backgroundColor: "#2E7D32" } : undefined}
+              >
+                {labels[f]}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Expenses list */}
       <Card>
         <CardHeader className="pb-3">
@@ -135,6 +171,10 @@ export default function GastosPage() {
             <div className="divide-y">
               {expenses.map((expense) => {
                 const cat = getCat(expense.category);
+                const isSharedExpense = expense.is_shared && !!familyGroupId;
+                const addedBy = expense.added_by_user_id;
+                const isOwnExpense = addedBy === userId;
+
                 return (
                   <div key={expense.id} className="flex items-center justify-between py-3 gap-3">
                     <div className="flex items-center gap-3 min-w-0">
@@ -143,13 +183,23 @@ export default function GastosPage() {
                         <p className="text-sm font-medium truncate">
                           {expense.description || expense.category}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5">
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           <Badge variant="secondary" className="text-xs capitalize">
                             {expense.category}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(expense.date), "d MMM", { locale: es })}
                           </span>
+                          {isSharedExpense && (
+                            <span className="flex items-center gap-1 text-xs text-blue-600">
+                              <Users size={10} />compartido
+                            </span>
+                          )}
+                          {familyGroupId && addedBy && !isOwnExpense && (
+                            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-white text-[10px] font-bold shrink-0" style={{ backgroundColor: "#1565C0" }}>
+                              {getMemberInitials(addedBy)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -180,6 +230,8 @@ export default function GastosPage() {
           onOpenChange={setDialogOpen}
           userId={userId}
           defaultCurrency={defaultCurrency}
+          familyGroupId={familyGroupId}
+          groupType={groupType}
           onSuccess={() => loadExpenses(userId)}
         />
       )}

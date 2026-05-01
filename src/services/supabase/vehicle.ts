@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { Vehicle, FuelLog, MaintenanceLog } from "@/types/models";
 
 export const vehicleService = {
-  async getAll(userId: string) {
+  async getAll(userId: string, familyGroupId?: string | null) {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("vehiculos").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+    let query = supabase.from("vehiculos").select("*").order("created_at", { ascending: true });
+    query = familyGroupId
+      ? query.eq("family_group_id", familyGroupId)
+      : query.eq("user_id", userId);
+    const { data, error } = await query;
     if (error) throw error;
     return data as Vehicle[];
   },

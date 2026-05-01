@@ -15,11 +15,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { installmentsService } from "@/services/supabase/installments";
 import { authService } from "@/services/supabase/auth";
+import { useFamily } from "@/contexts/FamilyContext";
 import { formatAmount, ISO_4217_CURRENCIES } from "@/constants/currencies";
 import type { Installment } from "@/types/models";
 
 export default function CuotasPage() {
   const { t } = useTranslation();
+  const { familyGroupId } = useFamily();
   const [installments, setInstallments] = useState<Installment[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function CuotasPage() {
     authService.getUser().then((u) => {
       if (!u) return;
       setUserId(u.id);
-      installmentsService.getAll(u.id).then(setInstallments).finally(() => setLoading(false));
+      installmentsService.getAll(u.id, familyGroupId).then(setInstallments).finally(() => setLoading(false));
     });
   }, []);
 

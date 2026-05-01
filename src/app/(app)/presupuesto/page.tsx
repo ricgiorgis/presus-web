@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { authService } from "@/services/supabase/auth";
 import { expensesService } from "@/services/supabase/expenses";
 import { budgetService } from "@/services/supabase/budget";
+import { useFamily } from "@/contexts/FamilyContext";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { ISO_4217_CURRENCIES, formatAmount } from "@/constants/currencies";
 import { useSettingsStore } from "@/store/settingsStore";
@@ -43,6 +44,7 @@ function getProgressColor(pct: number) {
 export default function PresupuestoPage() {
   const { t } = useTranslation();
   const { currency: defaultCurrency } = useSettingsStore();
+  const { familyGroupId } = useFamily();
   const [userId, setUserId] = useState<string | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -64,8 +66,8 @@ export default function PresupuestoPage() {
     setLoading(true);
     try {
       const [bud, exp] = await Promise.all([
-        budgetService.getAll(uid),
-        expensesService.getAll(uid, { month: currentMonth }),
+        budgetService.getAll(uid, familyGroupId),
+        expensesService.getAll(uid, { month: currentMonth }, familyGroupId),
       ]);
       setBudgets(bud);
       setExpenses(exp);
@@ -81,7 +83,7 @@ export default function PresupuestoPage() {
       if (u) { setUserId(u.id); load(u.id); }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [familyGroupId]);
 
   const getSpent = (cat: string) =>
     expenses.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0);
@@ -90,7 +92,7 @@ export default function PresupuestoPage() {
     if (!userId) return;
     setSaving(true);
     try {
-      await budgetService.create({ ...data, user_id: userId });
+      await budgetService.create({ ...data, user_id: userId, ...(familyGroupId ? { family_group_id: familyGroupId } : {}) });
       toast.success("Presupuesto creado");
       reset();
       setDialogOpen(false);

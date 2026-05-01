@@ -15,11 +15,13 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { debtsService } from "@/services/supabase/debts";
 import { authService } from "@/services/supabase/auth";
+import { useFamily } from "@/contexts/FamilyContext";
 import { formatAmount, ISO_4217_CURRENCIES } from "@/constants/currencies";
 import type { Debt } from "@/types/models";
 
 export default function DeudasPage() {
   const { t } = useTranslation();
+  const { familyGroupId } = useFamily();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -30,7 +32,7 @@ export default function DeudasPage() {
     authService.getUser().then((u) => {
       if (!u) return;
       setUserId(u.id);
-      debtsService.getAll(u.id).then(setDebts).finally(() => setLoading(false));
+      debtsService.getAll(u.id, familyGroupId).then(setDebts).finally(() => setLoading(false));
     });
   }, []);
 

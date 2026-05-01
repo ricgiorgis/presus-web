@@ -1,6 +1,7 @@
 "use client";
 import "@/i18n";
 import { useEffect, useState } from "react";
+import { FamilyProvider } from "@/contexts/FamilyContext";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
@@ -201,7 +202,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto p-6">
-          {children}
+          {user ? (
+            <FamilyProvider userId={user.id}>
+              {children}
+            </FamilyProvider>
+          ) : children}
         </main>
       </div>
     </div>

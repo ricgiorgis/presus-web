@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { Budget } from "@/types/models";
 
 export const budgetService = {
-  async getAll(userId: string) {
+  async getAll(userId: string, familyGroupId?: string | null) {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("presupuesto").select("*").eq("user_id", userId).order("category");
+    let query = supabase.from("presupuesto").select("*").order("category");
+    query = familyGroupId
+      ? query.eq("family_group_id", familyGroupId)
+      : query.eq("user_id", userId);
+    const { data, error } = await query;
     if (error) throw error;
     return data as Budget[];
   },

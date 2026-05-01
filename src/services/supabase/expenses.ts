@@ -2,13 +2,23 @@ import { createClient } from "@/lib/supabase/client";
 import type { Expense } from "@/types/models";
 
 export const expensesService = {
-  async getAll(userId: string, filters?: { category?: string; month?: string }) {
+  async getAll(
+    userId: string,
+    filters?: { category?: string; month?: string; sharedFilter?: "all" | "shared" | "personal" },
+    familyGroupId?: string | null
+  ) {
     const supabase = createClient();
-    let query = supabase
-      .from("gastos")
-      .select("*")
-      .eq("user_id", userId)
-      .order("date", { ascending: false });
+    let query = supabase.from("gastos").select("*").order("date", { ascending: false });
+
+    if (familyGroupId) {
+      query = query.eq("family_group_id", familyGroupId);
+      if (filters?.sharedFilter === "shared") query = query.eq("is_shared", true);
+      else if (filters?.sharedFilter === "personal") {
+        query = query.eq("is_shared", false).eq("added_by_user_id", userId);
+      }
+    } else {
+      query = query.eq("user_id", userId);
+    }
 
     if (filters?.category) query = query.eq("category", filters.category);
     if (filters?.month) {

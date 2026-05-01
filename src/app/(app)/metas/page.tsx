@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { authService } from "@/services/supabase/auth";
 import { goalsService } from "@/services/supabase/goals";
+import { useFamily } from "@/contexts/FamilyContext";
 import { ISO_4217_CURRENCIES, formatAmount } from "@/constants/currencies";
 import { useSettingsStore } from "@/store/settingsStore";
 import type { Goal } from "@/types/models";
@@ -42,6 +43,7 @@ type FundsFormInput = z.input<typeof fundsSchema>;
 export default function MetasPage() {
   const { t } = useTranslation();
   const { currency: defaultCurrency } = useSettingsStore();
+  const { familyGroupId } = useFamily();
   const [userId, setUserId] = useState<string | null>(null);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,7 +64,7 @@ export default function MetasPage() {
   async function load(uid: string) {
     setLoading(true);
     try {
-      setGoals(await goalsService.getAll(uid));
+      setGoals(await goalsService.getAll(uid, familyGroupId));
     } catch {
       toast.error("Error al cargar metas");
     } finally {
@@ -72,7 +74,8 @@ export default function MetasPage() {
 
   useEffect(() => {
     authService.getUser().then((u) => { if (u) { setUserId(u.id); load(u.id); } });
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyGroupId]);
 
   const onSubmitGoal = async (data: GoalForm) => {
     if (!userId) return;
@@ -86,6 +89,7 @@ export default function MetasPage() {
         currency_code: data.currency_code,
         color: data.color,
         deadline: data.deadline ?? null,
+        ...(familyGroupId ? { family_group_id: familyGroupId } : {}),
       });
       toast.success("Meta creada");
       reset();

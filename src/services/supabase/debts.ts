@@ -2,10 +2,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { Debt, DebtDirection } from "@/types/models";
 
 export const debtsService = {
-  async getAll(userId: string): Promise<Debt[]> {
+  async getAll(userId: string, familyGroupId?: string | null): Promise<Debt[]> {
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("debts").select("*").eq("user_id", userId).order("date", { ascending: false });
+    let query = supabase.from("debts").select("*").order("date", { ascending: false });
+    query = familyGroupId
+      ? query.eq("family_group_id", familyGroupId)
+      : query.eq("user_id", userId);
+    const { data, error } = await query;
     if (error) throw error;
     return data as Debt[];
   },
@@ -13,6 +16,7 @@ export const debtsService = {
   async create(debt: {
     user_id: string; person_name: string; amount: number;
     currency_code: string; direction: DebtDirection; description?: string; date: string;
+    family_group_id?: string | null; added_by_user_id?: string | null;
   }): Promise<Debt> {
     const supabase = createClient();
     const { data, error } = await supabase.from("debts").insert(debt).select().single();

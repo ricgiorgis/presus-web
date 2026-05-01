@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { expensesService } from "@/services/supabase/expenses";
 import { streakService } from "@/services/supabase/streak";
 import { EXPENSE_CATEGORIES } from "@/constants/categories";
 import { ISO_4217_CURRENCIES } from "@/constants/currencies";
+import type { FamilyGroupType } from "@/types/models";
 
 const schema = z.object({
   category: z.string().min(1, "Selecciona una categoría"),
@@ -31,20 +33,21 @@ interface AddExpenseDialogProps {
   onOpenChange: (open: boolean) => void;
   userId: string;
   defaultCurrency?: string;
+  familyGroupId?: string | null;
+  groupType?: FamilyGroupType | null;
   onSuccess: () => void;
 }
 
-export function AddExpenseDialog({ open, onOpenChange, userId, defaultCurrency = "GTQ", onSuccess }: AddExpenseDialogProps) {
+export function AddExpenseDialog({
+  open, onOpenChange, userId, defaultCurrency = "GTQ",
+  familyGroupId, groupType, onSuccess,
+}: AddExpenseDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [isShared, setIsShared] = useState(true);
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors },
-  } = useForm<FormInput, unknown, FormValues>({
+  const showToggle = familyGroupId && (groupType === "familiar" || groupType === "roommates");
+
+  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       date: format(new Date(), "yyyy-MM-dd"),
@@ -58,6 +61,10 @@ export function AddExpenseDialog({ open, onOpenChange, userId, defaultCurrency =
   const onSubmit = async (data: FormValues) => {
     setSaving(true);
     try {
+      const sharedValue = familyGroupId
+        ? (groupType === "pareja" ? true : isShared)
+        : false;
+
       await expensesService.create({
         user_id: userId,
         amount: data.amount,
@@ -65,6 +72,11 @@ export function AddExpenseDialog({ open, onOpenChange, userId, defaultCurrency =
         category: data.category,
         description: data.description ?? "",
         date: data.date,
+        ...(familyGroupId ? {
+          family_group_id: familyGroupId,
+          is_shared: sharedValue,
+          added_by_user_id: userId,
+        } : { is_shared: false }),
       });
       await streakService.recordActivity(userId);
       toast.success("Gasto registrado");
@@ -135,6 +147,16 @@ export function AddExpenseDialog({ open, onOpenChange, userId, defaultCurrency =
             <Input type="date" {...register("date")} />
             {errors.date && <p className="text-sm text-destructive">{errors.date.message}</p>}
           </div>
+
+          {showToggle && (
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Gasto compartido</p>
+                <p className="text-xs text-muted-foreground">Visible para todos los miembros</p>
+              </div>
+              <Switch checked={isShared} onCheckedChange={setIsShared} />
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
