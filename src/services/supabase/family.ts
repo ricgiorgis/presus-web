@@ -28,7 +28,7 @@ export const familyService = {
 
     const { data: group, error: groupErr } = await supabase
       .from("familia_groups")
-      .insert({ name, type, user_id: userId, max_members: maxMembers })
+      .insert({ name, type, user_id: userId, max_members: maxMembers, invite_code: crypto.randomUUID() })
       .select()
       .single();
 
