@@ -4,22 +4,29 @@ import type { FamilyGroup, FamiliaDbMember, FamilyInvite, FamilyGroupWithMembers
 export const familyService = {
   async getUserGroup(userId: string): Promise<FamilyGroupWithMembers | null> {
     const supabase = createClient();
+
     const { data: membership } = await supabase
       .from("familia_members")
       .select("group_id")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
 
     if (!membership) return null;
 
-    const { data, error } = await supabase
+    const { data: group, error: groupErr } = await supabase
       .from("familia_groups")
-      .select("*, familia_members(*)")
+      .select("*")
       .eq("id", membership.group_id)
       .single();
 
-    if (error || !data) return null;
-    return data as FamilyGroupWithMembers;
+    if (groupErr || !group) return null;
+
+    const { data: members } = await supabase
+      .from("familia_members")
+      .select("*")
+      .eq("group_id", membership.group_id);
+
+    return { ...group, familia_members: members ?? [] } as FamilyGroupWithMembers;
   },
 
   async createGroup(name: string, type: FamilyGroupType, userId: string): Promise<FamilyGroup> {
