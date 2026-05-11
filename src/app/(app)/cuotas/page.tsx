@@ -34,7 +34,8 @@ export default function CuotasPage() {
       setUserId(u.id);
       installmentsService.getAll(u.id, familyGroupId).then(setInstallments).finally(() => setLoading(false));
     });
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [familyGroupId]);
 
   const handleCreate = async () => {
     if (!userId || !form.name || !form.total_amount || !form.installments_count) {
@@ -45,6 +46,8 @@ export default function CuotasPage() {
         user_id: userId, name: form.name, total_amount: parseFloat(form.total_amount),
         installments_count: parseInt(form.installments_count), paid_count: 0,
         start_date: form.start_date, currency_code: form.currency_code,
+        added_by_user_id: userId,
+        ...(familyGroupId ? { family_group_id: familyGroupId } : {}),
       });
       setInstallments([newItem, ...installments]);
       setOpen(false);
