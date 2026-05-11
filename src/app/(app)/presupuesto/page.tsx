@@ -28,6 +28,7 @@ import type { Budget, Expense } from "@/types/models";
 
 const budgetSchema = z.object({
   category: z.string().min(1),
+  name: z.string().optional(),
   limit_amount: z.coerce.number().positive("Ingresa un monto válido"),
   currency_code: z.string().min(1),
   period: z.enum(["monthly", "weekly"]),
@@ -151,7 +152,10 @@ export default function PresupuestoPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-2xl">{cat?.emoji ?? "📦"}</span>
-                      <CardTitle className="text-sm capitalize">{budget.category}</CardTitle>
+                      <div>
+                        <CardTitle className="text-sm capitalize">{budget.name || budget.category}</CardTitle>
+                        {budget.name && <p className="text-xs text-muted-foreground capitalize">{budget.category}</p>}
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
@@ -209,6 +213,11 @@ export default function PresupuestoPage() {
                 </SelectContent>
               </Select>
               {errors.category && <p className="text-sm text-destructive">Requerido</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nombre <span className="text-muted-foreground text-xs">(opcional, ej: luz, internet)</span></Label>
+              <Input placeholder="Ej: Luz, Agua, Netflix..." {...register("name")} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">

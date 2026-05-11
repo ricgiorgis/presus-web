@@ -5,12 +5,13 @@ export const familyService = {
   async getUserGroup(userId: string): Promise<FamilyGroupWithMembers | null> {
     const supabase = createClient();
 
-    const { data: membership } = await supabase
+    const { data: memberships } = await supabase
       .from("familia_members")
       .select("group_id")
       .eq("user_id", userId)
-      .maybeSingle();
+      .limit(1);
 
+    const membership = memberships?.[0];
     if (!membership) return null;
 
     const { data: group, error: groupErr } = await supabase
@@ -22,9 +23,7 @@ export const familyService = {
     if (groupErr || !group) return null;
 
     const { data: members } = await supabase
-      .from("familia_members")
-      .select("*")
-      .eq("group_id", membership.group_id);
+      .rpc("get_group_members", { p_group_id: membership.group_id });
 
     return { ...group, familia_members: members ?? [] } as FamilyGroupWithMembers;
   },

@@ -89,6 +89,7 @@ export default function MetasPage() {
         currency_code: data.currency_code,
         color: data.color,
         deadline: data.deadline ?? null,
+        added_by_user_id: userId,
         ...(familyGroupId ? { family_group_id: familyGroupId } : {}),
       });
       toast.success("Meta creada");

@@ -21,6 +21,7 @@ export interface Budget {
   id: string;
   user_id: string;
   category: string;
+  name?: string | null;
   limit_amount: number;
   currency_code: CurrencyCode;
   period: "monthly" | "weekly";
