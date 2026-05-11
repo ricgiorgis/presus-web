@@ -88,7 +88,7 @@ export default function MetasPage() {
         current_amount: 0,
         currency_code: data.currency_code,
         color: data.color,
-        deadline: data.deadline ?? null,
+        deadline: data.deadline || null,
         added_by_user_id: userId,
         ...(familyGroupId ? { family_group_id: familyGroupId } : {}),
       });
